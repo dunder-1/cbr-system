@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import csv, json
+import similarity
 
 @dataclass
 class Entity:
@@ -19,6 +20,7 @@ class Query(Entity):
     """
     @classmethod
     def from_problems(cls, **problem):
+        """Returns a query object by providing problems as keyword arguments"""
         return cls(problem, solution=dict())
 
 
@@ -161,3 +163,18 @@ class CaseBase:
             cases = cases,
             config = cfg
         )
+
+
+    def retrieve(self, query: Query, field: str|list, sim_func) -> Case:
+        """Search for case most similar to query"""
+        
+        retrieved = {"case": None, "sim": -1.0}
+        for case in self.cases:
+            _sim = sim_func(query.problem[field], case.problem[field])
+            if _sim > retrieved["sim"]:
+                retrieved = {
+                    "case": case,
+                    "sim": _sim
+                }
+        
+        return retrieved
