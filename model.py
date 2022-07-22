@@ -43,6 +43,7 @@ class CaseBase:
     cases: list[Case]
     config: dict[str]
     fields: tuple[str]
+    __field_infos: dict[str] = None
 
     def __repr__(self) -> str:
         key_vals = f"cases={len(self.cases)}, fields={list(self.fields.values())}"
@@ -164,7 +165,6 @@ class CaseBase:
             config = cfg
         )
 
-
     def retrieve(self, query: Query, field: str|list, sim_func) -> Case:
         """Search for case most similar to query"""
         
@@ -178,3 +178,41 @@ class CaseBase:
                 }
         
         return retrieved
+
+    def get_values_by_field(self, field: str) -> set[str]:
+        
+        if field not in list(self.fields["problem"]) + list(self.fields["solution"]):
+            raise ValueError(f"unknown field {field}")
+
+        distinct_values = set()
+        for elem in self.cases:
+
+            if field in elem.problem:
+                distinct_values.add(elem.problem[field])
+
+            elif field in elem.solution:
+                distinct_values.add(elem.solution[field])
+
+        return distinct_values
+            
+
+    def add_symbolic_sim(self, field: str, similarity_matrix: dict):
+        """Add hardcoded similarities for symbolic values of `field`
+        
+        structure of similarity_matrix:
+        {
+            "Audi": {"Citroen": 0.4, "Porsche": 0.9},
+            "Citroen": {"Audi": 0.4, "Porsche": 0.2},
+            "Porsche": {"Audi": 0.7, "Citroen": 0.1}
+        }
+        """
+
+        if field not in list(self.fields["problem"]) + list(self.fields["solution"]):
+            raise ValueError(f"unknown field {field}")
+
+        self.__field_infos = {
+            field: {
+                "symbolic_sims": similarity_matrix
+            }
+        }
+        
