@@ -38,6 +38,9 @@ class RetrievedCase(Case):
     similarity: float
     sim_per_field: list[tuple]
 
+    def __str__(self) -> str:
+        return " ".join(self.solution.values()).capitalize()
+
 ###############################################################################
 
 
