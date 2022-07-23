@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import csv, json
-import similarity
+from typing import Callable
+import similarity as sim
 
 @dataclass
 class Entity:
@@ -32,6 +33,10 @@ class Case(Entity):
     """
     pass
 
+@dataclass
+class RetrievedCase(Case):
+    similarity: float
+    sim_per_field: list[tuple]
 
 ###############################################################################
 
@@ -165,19 +170,54 @@ class CaseBase:
             config = cfg
         )
 
-    def retrieve(self, query: Query, field: str|list, sim_func) -> Case:
+    def retrieve(self, query: Query, **fields_and_sim_funcs: dict[str, Callable]) -> RetrievedCase:
         """Search for case most similar to query"""
         
-        retrieved = {"case": None, "sim": -1.0}
+        
+        r = {"case": None, "sim": -1.0, "sim_per_field": dict()}
         for case in self.cases:
-            _sim = sim_func(query.problem[field], case.problem[field])
-            if _sim > retrieved["sim"]:
-                retrieved = {
+
+            _sim = 0.0
+            _sim_per_field = dict()
+            for field, sim_func in fields_and_sim_funcs.items():
+
+                if sim_func in sim.SYMBOLIC_SIMS:
+                    field_sim = (
+                        field, 
+                        sim_func(
+                            query.problem[field],
+                            case.problem[field],
+                            self.get_symbolic_sim(field)
+                        )
+                    )
+                    
+                elif sim_func in sim.METRIC_SIMS:
+                    field_sim = (
+                        field, 
+                        sim_func(
+                            query.problem[field], 
+                            case.problem[field]
+                        )
+                    )
+
+                _sim_per_field[field_sim[0]] = field_sim[1]
+                _sim += field_sim[1]
+
+            if _sim > r["sim"]:
+                r = {
                     "case": case,
-                    "sim": _sim
+                    "sim": _sim,
+                    "sim_per_field": _sim_per_field
                 }
         
-        return retrieved
+
+
+        return RetrievedCase(
+            r["case"].problem, 
+            r["case"].solution,
+            r["sim"],
+            r["sim_per_field"]
+        )
 
     def get_values_by_field(self, field: str) -> set[str]:
         
@@ -201,9 +241,9 @@ class CaseBase:
         
         structure of similarity_matrix:
         {
-            "Audi": {"Citroen": 0.4, "Porsche": 0.9},
-            "Citroen": {"Audi": 0.4, "Porsche": 0.2},
-            "Porsche": {"Audi": 0.7, "Citroen": 0.1}
+            "Audi": {"Audi": 1.0, "Citroen": 0.4, "Porsche": 0.9},
+            "Citroen": {"Audi": 0.4, "Citroen: 1.0, "Porsche": 0.2},
+            "Porsche": {"Audi": 0.7, "Citroen": 0.1, "Porsche": 1.0}
         }
         """
 
@@ -216,3 +256,5 @@ class CaseBase:
             }
         }
         
+    def get_symbolic_sim(self, field: str) -> dict[str]:
+        return self.__field_infos[field]["symbolic_sims"]

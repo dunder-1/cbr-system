@@ -1,5 +1,9 @@
 import math
+from typing import Any, Callable
 
+"""
+METRIC SIMILARITY FUNCTIONS
+"""
 def manhattan_sim(q_val: float, c_val: float) -> float:
     m_dist = lambda x, y: abs(x - y)
     return 1 / (1 + m_dist(q_val, c_val))
@@ -8,6 +12,21 @@ def euclid_sim(q_val: float, c_val: float) -> float:
     e_dist = lambda x, y: math.sqrt((x - y)**2)
     return 1 / (1 + e_dist(q_val, c_val))
 
+
+METRIC_SIMS = [manhattan_sim, euclid_sim]
+
+"""
+SYMBOLIC SIMILARITY
+"""
+def symbolic_sim(q_field_name: str, c_field_name: str, sim_matrix: dict) -> float:
+    return sim_matrix[q_field_name][c_field_name]
+
+
+SYMBOLIC_SIMS = [symbolic_sim]
+
+"""
+CHARACTER EDIT DISTANCE
+"""
 def edit_distance(word_1: str, word_2: str, to_same_case: bool = True) -> int:
 
     if word_1 == word_2:
@@ -58,3 +77,5 @@ def edit_distance(word_1: str, word_2: str, to_same_case: bool = True) -> int:
 
     return "".join(word_1), count
 
+
+STRING_SIMS = [edit_distance]
